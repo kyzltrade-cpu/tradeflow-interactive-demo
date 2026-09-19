@@ -43,12 +43,150 @@ export interface CompanySettings {
   chat_widget_enabled: boolean;
 }
 
-export const MOCK_COMPANY = {
-  name: 'Pacific Trading Co.',
-  industry: 'Steel & Metal Trading',
-  location: 'Hong Kong',
-  subscription_status: 'active',
-};
+// === Golden Path Types ===
+
+export interface ExtractedField {
+  field: string;
+  value: string | null;
+  status: 'extracted' | 'confirmed' | 'missing' | 'estimated';
+}
+
+export interface Inquiry {
+  id: string;
+  displayId: string;
+  customer: string;
+  company: string;
+  channel: string;
+  receivedAt: string;
+  status: 'received' | 'reviewing' | 'extracting' | 'quoted' | 'converted' | 'closed';
+  originalMessage: string;
+  attachments: string[];
+  extractedFields: ExtractedField[];
+  missingFields: string[];
+  clarificationDraft: string | null;
+  conversationId: string;
+  opportunityId: string | null;
+  quoteId: string | null;
+}
+
+export interface Supplier {
+  id: string;
+  name: string;
+  location: string;
+  specialty: string;
+  rating: number;
+  certifications: string[];
+  contact: string;
+  email: string;
+  verified: boolean;
+}
+
+export interface SupplierResponse {
+  id: string;
+  supplierId: string;
+  rfqId: string;
+  price: number;
+  currency: string;
+  moq: number;
+  leadTime: number;
+  leadTimeUnit: string;
+  certifications: string[];
+  validUntil: string;
+  packaging: string;
+  notes: string;
+  receivedAt: string;
+  status: 'pending' | 'received' | 'selected' | 'rejected';
+}
+
+export interface Rfq {
+  id: string;
+  displayId: string;
+  inquiryId: string;
+  suppliers: string[];
+  sentAt: string;
+  deadline: string;
+  status: 'draft' | 'sent' | 'partially_received' | 'received' | 'closed';
+  responses: SupplierResponse[];
+}
+
+export interface CostLine {
+  label: string;
+  amount: number;
+  notes?: string;
+}
+
+export interface Quote {
+  id: string;
+  displayId: string;
+  inquiryId: string;
+  opportunityId: string;
+  rfqId: string;
+  customer: string;
+  company: string;
+  product: string;
+  quantity: string;
+  currency: string;
+  costBreakdown: CostLine[];
+  totalCost: number;
+  marginPercent: number;
+  customerPrice: number;
+  status: 'draft' | 'pending_approval' | 'approved' | 'sent' | 'accepted' | 'rejected' | 'negotiating';
+  createdAt: string;
+  sentAt: string | null;
+  approvedAt: string | null;
+  validUntil: string;
+  notes: string;
+  supplierId: string;
+  assumptions: string[];
+  auditTrail: AuditEntry[];
+}
+
+export interface AuditEntry {
+  timestamp: string;
+  action: string;
+  user: string;
+  details: string;
+}
+
+export interface FollowUp {
+  id: string;
+  quoteId: string;
+  scheduledFor: string;
+  status: 'pending' | 'sent' | 'completed' | 'paused';
+  type: 'initial' | 'follow_up_1' | 'follow_up_2' | 'final';
+  message: string;
+}
+
+export interface Opportunity {
+  id: string;
+  displayId: string;
+  inquiryId: string;
+  company: string;
+  contact: string;
+  stage: 'lead' | 'qualified' | 'proposal' | 'negotiation' | 'won' | 'lost';
+  priority: 'low' | 'medium' | 'high';
+  estimatedValue: number;
+  currency: string;
+  nextAction: string;
+  missingInformation: string[];
+  owner: string;
+  createdAt: string;
+  quoteId: string | null;
+}
+
+function minutesAgo(mins: number): string {
+  return new Date(Date.now() - mins * 60000).toISOString();
+}
+
+function daysAgo(days: number): string {
+  return new Date(Date.now() - days * 86400000).toISOString();
+}
+
+function daysFromNow(days: number): string {
+  return new Date(Date.now() + days * 86400000).toISOString();
+}
+
+// === Mock Products ===
 
 export const MOCK_PRODUCTS: Product[] = [
   {
@@ -101,9 +239,7 @@ export const MOCK_PRODUCTS: Product[] = [
   },
 ];
 
-function minutesAgo(mins: number): string {
-  return new Date(Date.now() - mins * 60000).toISOString();
-}
+// === Mock Conversations ===
 
 export const MOCK_CONVERSATIONS: Conversation[] = [
   {
@@ -114,7 +250,7 @@ export const MOCK_CONVERSATIONS: Conversation[] = [
     channel: 'WhatsApp',
     status: 'bookmarked',
     detected_language: 'en',
-    handoff_summary: 'Wants 5,000 pcs 304 SS bottles, CIF Hamburg. Budget ~$28/unit.\nFollow up on sample request — sent address yesterday.',
+    handoff_summary: 'Wants 10,000 pcs 304 SS bottles, CIF Hamburg. Budget ~$26/unit.\nFollow up on sample request — sent address yesterday.',
     updated_at: minutesAgo(12),
     last_message: { content: 'Can you do $26 if I order 10,000?', role: 'user', created_at: minutesAgo(12) },
     message_count: 14,
@@ -124,7 +260,7 @@ export const MOCK_CONVERSATIONS: Conversation[] = [
     contact_name: 'Hans Mueller',
     contact_phone: '+49-555-0202',
     contact_wechat_id: null,
-    channel: 'WhatsApp',
+    channel: 'Email',
     status: 'ai',
     detected_language: 'en',
     handoff_summary: null,
@@ -140,139 +276,233 @@ export const MOCK_CONVERSATIONS: Conversation[] = [
     channel: 'WeChat',
     status: 'bookmarked',
     detected_language: 'zh',
-    handoff_summary: ' discussing 316L containers, requested 15% discount on 5,000 unit order.\nNeeds quote by Friday — mentioned competitor pricing at $42/unit.',
+    handoff_summary: 'Discussing 316L containers, requested 15% discount on 5,000 unit order.\nNeeds quote by Friday — mentioned competitor pricing at $42/unit.',
     updated_at: minutesAgo(180),
     last_message: { content: '我們需要在星期五前拿到報價', role: 'user', created_at: minutesAgo(180) },
     message_count: 11,
   },
+];
+
+// === Golden Path Mock Data ===
+
+export const MOCK_SUPPLIERS: Supplier[] = [
   {
-    id: 'c4',
-    contact_name: 'Raj Patel',
-    contact_phone: '+91-555-0404',
-    contact_wechat_id: null,
-    channel: 'WhatsApp',
-    status: 'ai',
-    detected_language: 'en',
-    handoff_summary: null,
-    updated_at: minutesAgo(30),
-    last_message: { content: 'Do you have the 6061-T6 spec sheet?', role: 'user', created_at: minutesAgo(30) },
-    message_count: 6,
+    id: 's1',
+    name: 'Shenzhen Steel Works',
+    location: 'Shenzhen, China',
+    specialty: 'Stainless Steel Bottles & Containers',
+    rating: 4.8,
+    certifications: ['ISO 9001', 'FDA', 'SGS'],
+    contact: 'Zhang Wei',
+    email: 'zhang@szsteel.cn',
+    verified: true,
   },
   {
-    id: 'c5',
-    contact_name: 'Maria Garcia',
-    contact_phone: '+34-555-0505',
-    contact_wechat_id: null,
-    channel: 'WhatsApp',
-    status: 'bookmarked',
-    detected_language: 'en',
-    handoff_summary: null,
-    updated_at: minutesAgo(90),
-    last_message: { content: 'I need SS flanges for a chemical plant — what grade?', role: 'user', created_at: minutesAgo(90) },
-    message_count: 5,
+    id: 's2',
+    name: 'Guangdong Metal Co.',
+    location: 'Guangzhou, China',
+    specialty: 'Metal Packaging & Bottles',
+    rating: 4.2,
+    certifications: ['ISO 9001'],
+    contact: 'Li Ming',
+    email: 'liming@gdmetal.cn',
+    verified: true,
   },
   {
-    id: 'c6',
-    contact_name: 'Li Wei',
-    contact_phone: null,
-    contact_wechat_id: 'li_wei_shanghai',
-    channel: 'WeChat',
-    status: 'ai',
-    detected_language: 'zh',
-    handoff_summary: null,
-    updated_at: minutesAgo(60),
-    last_message: { content: '碳鋼管有現貨嗎？', role: 'user', created_at: minutesAgo(60) },
-    message_count: 4,
+    id: 's3',
+    name: 'Dongguan Drinkware',
+    location: 'Dongguan, China',
+    specialty: 'Custom Drinkware & Promotional Items',
+    rating: 4.5,
+    certifications: ['ISO 9001', 'FDA', 'BSCI'],
+    contact: 'Chen Jie',
+    email: 'chenjie@dgdrink.cn',
+    verified: true,
+  },
+];
+
+export const MOCK_INQUIRIES: Inquiry[] = [
+  {
+    id: 'inq1',
+    displayId: 'INQ-2026-001',
+    customer: 'Sarah Chen',
+    company: 'Global Bottling Ltd',
+    channel: 'WhatsApp',
+    receivedAt: daysAgo(2),
+    status: 'reviewing',
+    originalMessage: "We need 10,000 stainless-steel bottles with our logo, delivered to London by 30 November. Please quote.",
+    attachments: ['RFQ_Sarah_Chen.pdf'],
+    extractedFields: [
+      { field: 'Product', value: '304 SS Bottle (500ml)', status: 'extracted' },
+      { field: 'Quantity', value: '10,000 pcs', status: 'confirmed' },
+      { field: 'Destination', value: 'London, UK', status: 'confirmed' },
+      { field: 'Delivery Date', value: '30 November 2026', status: 'confirmed' },
+      { field: 'Capacity', value: null, status: 'missing' },
+      { field: 'Logo Method', value: null, status: 'missing' },
+      { field: 'Packaging', value: null, status: 'missing' },
+    ],
+    missingFields: ['Capacity', 'Logo Method', 'Packaging'],
+    clarificationDraft: "Before we request supplier pricing, could you confirm:\n\n1. Bottle capacity (500ml, 750ml, or 1L)?\n2. Logo method (laser engraving, silk screen, or full wrap print)?\n3. Packaging requirements (individual box, bulk, or custom packaging)?",
+    conversationId: 'c1',
+    opportunityId: 'opp1',
+    quoteId: 'q1',
+  },
+];
+
+export const MOCK_RFQS: Rfq[] = [
+  {
+    id: 'rfq1',
+    displayId: 'RFQ-2026-001',
+    inquiryId: 'inq1',
+    suppliers: ['s1', 's2', 's3'],
+    sentAt: daysAgo(1),
+    deadline: daysFromNow(5),
+    status: 'received',
+    responses: [
+      {
+        id: 'sr1',
+        supplierId: 's1',
+        rfqId: 'rfq1',
+        price: 2.80,
+        currency: 'USD',
+        moq: 5000,
+        leadTime: 28,
+        leadTimeUnit: 'days',
+        certifications: ['FDA available'],
+        validUntil: daysFromNow(7),
+        packaging: 'Individual gift box',
+        notes: 'Price includes custom logo printing (silk screen, 1 color)',
+        receivedAt: daysAgo(0),
+        status: 'received',
+      },
+      {
+        id: 'sr2',
+        supplierId: 's2',
+        rfqId: 'rfq1',
+        price: 2.55,
+        currency: 'USD',
+        moq: 10000,
+        leadTime: 42,
+        leadTimeUnit: 'days',
+        certifications: ['Not confirmed'],
+        validUntil: daysFromNow(3),
+        packaging: 'Bulk carton',
+        notes: 'Lower price but higher MOQ and longer lead time',
+        receivedAt: daysAgo(0),
+        status: 'received',
+      },
+      {
+        id: 'sr3',
+        supplierId: 's3',
+        rfqId: 'rfq1',
+        price: 3.10,
+        currency: 'USD',
+        moq: 3000,
+        leadTime: 21,
+        leadTimeUnit: 'days',
+        certifications: ['FDA confirmed'],
+        validUntil: daysFromNow(14),
+        packaging: 'Individual box with sleeve',
+        notes: 'Premium packaging included. FDA certification confirmed.',
+        receivedAt: daysAgo(0),
+        status: 'received',
+      },
+    ],
+  },
+];
+
+export const MOCK_OPPORTUNITIES: Opportunity[] = [
+  {
+    id: 'opp1',
+    displayId: 'OPP-2026-001',
+    inquiryId: 'inq1',
+    company: 'Global Bottling Ltd',
+    contact: 'Sarah Chen',
+    stage: 'proposal',
+    priority: 'high',
+    estimatedValue: 28000,
+    currency: 'USD',
+    nextAction: 'Awaiting supplier comparison and quote generation',
+    missingInformation: ['Logo method', 'Packaging preference'],
+    owner: 'Demo User',
+    createdAt: daysAgo(2),
+    quoteId: 'q1',
+  },
+];
+
+export const MOCK_QUOTES: Quote[] = [
+  {
+    id: 'q1',
+    displayId: 'Q-2026-001',
+    inquiryId: 'inq1',
+    opportunityId: 'opp1',
+    rfqId: 'rfq1',
+    customer: 'Sarah Chen',
+    company: 'Global Bottling Ltd',
+    product: '304 SS Bottle (500ml)',
+    quantity: '10,000 pcs',
+    currency: 'USD',
+    costBreakdown: [
+      { label: 'Supplier cost (Shenzhen Steel Works)', amount: 28000, notes: '$2.80 × 10,000 pcs' },
+      { label: 'Packaging upgrade', amount: 1200, notes: 'Individual gift box' },
+      { label: 'Quality inspection', amount: 800, notes: 'Third-party SGS inspection' },
+      { label: 'Sea freight to London', amount: 3500, notes: 'FCL 20ft, ~25 days transit' },
+      { label: 'Insurance', amount: 350, notes: '1.1% of CIF value' },
+      { label: 'Contingency (5%)', amount: 1693, notes: 'Buffer for exchange rate fluctuation' },
+    ],
+    totalCost: 35543,
+    marginPercent: 15,
+    customerPrice: 40875,
+    status: 'pending_approval',
+    createdAt: daysAgo(1),
+    sentAt: null,
+    approvedAt: null,
+    validUntil: daysFromNow(14),
+    notes: 'CIF London. Includes custom logo printing (silk screen, 1 color). 28-day lead time.',
+    supplierId: 's1',
+    assumptions: [
+      'Exchange rate: 1 USD = 7.25 HKD',
+      'Freight rate based on current Shanghai-London route',
+      'Logo printing: silk screen, 1 color, included in supplier price',
+      'FDA certification available from supplier',
+    ],
+    auditTrail: [
+      { timestamp: daysAgo(1), action: 'Created', user: 'System', details: 'Auto-generated from RFQ comparison' },
+      { timestamp: daysAgo(0), action: 'Cost calculated', user: 'System', details: 'Total cost: $35,543, Margin: 15%' },
+      { timestamp: daysAgo(0), action: 'Pending approval', user: 'System', details: 'Sent to manager for approval' },
+    ],
+  },
+];
+
+export const MOCK_FOLLOWUPS: FollowUp[] = [
+  {
+    id: 'fu1',
+    quoteId: 'q1',
+    scheduledFor: daysFromNow(3),
+    status: 'pending',
+    type: 'initial',
+    message: 'Hi Sarah, following up on the quote we sent for 10,000 stainless steel bottles. Do you have any questions?',
   },
   {
-    id: 'c7',
-    contact_name: 'James Wilson',
-    contact_phone: '+44-555-0707',
-    contact_wechat_id: null,
-    channel: 'WhatsApp',
-    status: 'ai',
-    detected_language: 'en',
-    handoff_summary: null,
-    updated_at: minutesAgo(15),
-    last_message: { content: 'Great, can you send the proforma invoice?', role: 'user', created_at: minutesAgo(15) },
-    message_count: 10,
-  },
-  {
-    id: 'c8',
-    contact_name: 'Anna Kowalski',
-    contact_phone: '+48-555-0808',
-    contact_wechat_id: null,
-    channel: 'WhatsApp',
-    status: 'bookmarked',
-    detected_language: 'en',
-    handoff_summary: 'Custom CNC parts — needs prototype before bulk order.\nSent DWG files, waiting for engineering review and quote.',
-    updated_at: minutesAgo(240),
-    last_message: { content: 'When can I expect the prototype?', role: 'user', created_at: minutesAgo(240) },
-    message_count: 7,
+    id: 'fu2',
+    quoteId: 'q1',
+    scheduledFor: daysFromNow(7),
+    status: 'pending',
+    type: 'follow_up_1',
+    message: 'Hi Sarah, checking in on the bottle quote. The pricing is valid until the end of the month. Let me know if you need any adjustments.',
   },
 ];
 
 export const MOCK_MESSAGES: Record<string, Message[]> = {
   c1: [
-    { id: 'm1', role: 'user', content: 'Hi, I need 500ml stainless steel bottles. Can you supply?', created_at: minutesAgo(120) },
-    { id: 'm2', role: 'assistant', content: "Hello Sarah! Yes, we supply 304 stainless steel bottles (500ml). They're double-wall vacuum insulated, food-grade certified. Our MOQ is 5,000 pcs. What quantity are you looking at?", created_at: minutesAgo(119) },
-    { id: 'm3', role: 'user', content: "I need 5,000 units. What's the price?", created_at: minutesAgo(100) },
-    { id: 'm4', role: 'assistant', content: "For 5,000 pcs of 304 SS 500ml bottles, our price range is HKD $22–28/unit depending on finish and customization. This includes: body, lid, silicone seal, and gift box packaging.\n\nFOB Shanghai price: ~HKD $22/unit for plain finish.\nWith custom logo printing: ~HKD $25/unit.\n\nWould you like a formal quote?", created_at: minutesAgo(99) },
-    { id: 'm5', role: 'user', content: "What about CIF Hamburg?", created_at: minutesAgo(80) },
-    { id: 'm6', role: 'assistant', content: "For CIF Hamburg, we can arrange sea freight. Estimated CIF price: HKD $26–30/unit (depending on final specs). Transit time is about 25–30 days.\n\nWould you like me to prepare a detailed CIF quote?", created_at: minutesAgo(79) },
-    { id: 'm7', role: 'human', content: "I've taken over this conversation. Let me prepare the CIF quote manually.", created_at: minutesAgo(60) },
-    { id: 'm8', role: 'user', content: "Can you do $26 if I order 10,000?", created_at: minutesAgo(12) },
-  ],
-  c2: [
-    { id: 'm20', role: 'user', content: 'Do you supply carbon steel pipes?', created_at: minutesAgo(200) },
-    { id: 'm21', role: 'assistant', content: "Hello Hans! Yes, we supply both ERW and seamless carbon steel pipes. Available sizes range from 1/2 inch to 12 inches. All pipes are API 5L certified.\n\nWhat size and quantity are you looking for?", created_at: minutesAgo(199) },
-    { id: 'm22', role: 'user', content: 'I need 2,000 meters of 4-inch ERW pipe.', created_at: minutesAgo(150) },
-    { id: 'm23', role: 'assistant', content: "For 2,000 meters of 4-inch (DN100) ERW carbon steel pipe:\n\n- Price: USD $850–950/ton (FOB Shanghai)\n- Weight: ~9.1 kg/m, so ~18.2 tons total\n- Estimated total: USD $15,500–17,300\n- Lead time: 15–20 days\n\nWould you like a formal quotation?", created_at: minutesAgo(149) },
-    { id: 'm24', role: 'user', content: 'What about 3-month lead time for 2,000 meters?', created_at: minutesAgo(45) },
-  ],
-  c3: [
-    { id: 'm30', role: 'user', content: '你好，我需要316L不鏽鋼容器', created_at: minutesAgo(400) },
-    { id: 'm31', role: 'assistant', content: '您好！是的，我們有316L食品級不鏽鋼容器。請問您需要什麼規格？容量和數量是多少？', created_at: minutesAgo(399) },
-    { id: 'm32', role: 'user', content: '5000個，需要密封蓋子', created_at: minutesAgo(350) },
-    { id: 'm33', role: 'assistant', content: '好的，5000個316L不鏽鋼容器（配密封蓋）：\n\n- 單價：HKD $38–45/個\n- MOQ：2,000個\n- 交貨時間：20–25天\n\n需要我給您報價嗎？', created_at: minutesAgo(349) },
-    { id: 'm34', role: 'human', content: '我來接手這個對話。', created_at: minutesAgo(200) },
-    { id: 'm35', role: 'user', content: '我們需要在星期五前拿到報價', created_at: minutesAgo(180) },
-  ],
-  c4: [
-    { id: 'm40', role: 'user', content: 'Aluminum sheets 6061-T6, 3mm thick. Price?', created_at: minutesAgo(90) },
-    { id: 'm41', role: 'assistant', content: "Hello Raj! For 6061-T6 aluminum sheets, 3mm thick:\n\n- Price: USD $20–22/sqm\n- MOQ: 2,000 sqm\n- Cut-to-size available\n- Mill certificates included\n\nWhat quantity and dimensions do you need?", created_at: minutesAgo(89) },
-    { id: 'm42', role: 'user', content: '500 sheets, 1m x 2m each.', created_at: minutesAgo(60) },
-    { id: 'm43', role: 'assistant', content: "500 sheets × 2 sqm = 1,000 sqm total.\n\nPrice: USD $21/sqm (bulk discount)\nTotal: USD $21,000\nLead time: 10–15 days\n\nThis is below our usual MOQ, but I can check with management. Want me to proceed?", created_at: minutesAgo(59) },
-    { id: 'm44', role: 'user', content: 'Do you have the 6061-T6 spec sheet?', created_at: minutesAgo(30) },
-  ],
-  c5: [
-    { id: 'm50', role: 'user', content: 'I need SS flanges for a chemical plant', created_at: minutesAgo(120) },
-    { id: 'm51', role: 'assistant', content: "Hello Maria! We supply stainless steel flanges in various grades:\n- 304 SS (general use)\n- 316L SS (chemical/marine)\n- Duplex SS (high corrosion)\n\nWhat grade and size do you need?", created_at: minutesAgo(119) },
-    { id: 'm52', role: 'user', content: '316L, 4-inch, slip-on type. About 200 pcs.', created_at: minutesAgo(105) },
-    { id: 'm53', role: 'assistant', content: "For 200 pcs of 316L SS 4-inch slip-on flanges:\n\n- Price: USD $5.80/unit\n- Total: USD $1,160\n- Standards: ANSI 150 or DIN 2573\n- Lead time: 12–15 days\n\nWould you like a formal quote?", created_at: minutesAgo(104) },
-    { id: 'm54', role: 'user', content: "I need SS flanges for a chemical plant — what grade?", created_at: minutesAgo(90) },
-  ],
-  c6: [
-    { id: 'm60', role: 'user', content: '碳鋼管有現貨嗎？', created_at: minutesAgo(90) },
-    { id: 'm61', role: 'assistant', content: '您好！我們有碳鋼管現貨。常用規格（2寸、4寸、6寸）通常有庫存。\n\n請問您需要什麼規格和數量？', created_at: minutesAgo(89) },
-    { id: 'm62', role: 'user', content: '4寸，1000米', created_at: minutesAgo(70) },
-    { id: 'm63', role: 'assistant', content: '4寸碳鋼管1000米：\n\n- 單價：USD $880/噸\n- 約9.1噸，總計 ~USD $7,900\n- 現貨供應，3天內可發貨\n\n需要報價嗎？', created_at: minutesAgo(69) },
-  ],
-  c7: [
-    { id: 'm70', role: 'user', content: 'Hi, I need 304 SS bottles for a promotion. 3,000 units?', created_at: minutesAgo(180) },
-    { id: 'm71', role: 'assistant', content: "Hi James! For 3,000 pcs of 304 SS bottles (500ml):\n\n- Price: HKD $24/unit (small order premium)\n- Total: HKD $72,000\n- MOQ is usually 5,000, but I can check for 3,000\n- Lead time: 18–22 days\n\nShall I confirm with management?", created_at: minutesAgo(179) },
-    { id: 'm72', role: 'user', content: "Yes, please. Also need custom printing.", created_at: minutesAgo(150) },
-    { id: 'm73', role: 'assistant', content: "Custom printing available! Options:\n- Laser engraving: +HKD $1.50/unit\n- Silk screen (1 color): +HKD $2.00/unit\n- Full wrap print: +HKD $3.50/unit\n\nFor 3,000 pcs with silk screen: HKD $26/unit total = HKD $78,000\n\nI'll confirm availability with management now.", created_at: minutesAgo(149) },
-    { id: 'm74', role: 'assistant', content: "Good news — management approved 3,000 pcs! I'll send the proforma invoice.", created_at: minutesAgo(30) },
-    { id: 'm75', role: 'user', content: 'Great, can you send the proforma invoice?', created_at: minutesAgo(15) },
-  ],
-  c8: [
-    { id: 'm80', role: 'user', content: 'I need custom CNC parts. Can you do prototypes?', created_at: minutesAgo(500) },
-    { id: 'm81', role: 'assistant', content: "Hello Anna! Yes, we do prototype CNC machining. We can work from DWG, STEP, or IGES files.\n\nFor prototypes:\n- Lead time: 5–7 days\n- Price: depends on complexity\n\nCan you share the design files?", created_at: minutesAgo(499) },
-    { id: 'm82', role: 'user', content: "Here's the DWG file. 50 pieces for prototype.", created_at: minutesAgo(400) },
-    { id: 'm83', role: 'assistant', content: "Got it! I'll have our engineering team review the file and provide a quote within 24 hours.\n\nFor 50 pcs prototype:\n- Material: aluminum 6061 or 7075?\n- Finish: anodized, polished, or raw?\n- Tolerance: standard (±0.1mm) or tight (±0.05mm)?", created_at: minutesAgo(399) },
-    { id: 'm84', role: 'human', content: "I'll handle this one. Let me review the DWG file with our engineer.", created_at: minutesAgo(300) },
-    { id: 'm85', role: 'user', content: 'When can I expect the prototype?', created_at: minutesAgo(240) },
+    { id: 'm1', role: 'user', content: 'Hi, I need 500ml stainless steel bottles. Can you supply?', created_at: daysAgo(3) },
+    { id: 'm2', role: 'assistant', content: "Hello Sarah! Yes, we supply 304 stainless steel bottles (500ml). They're double-wall vacuum insulated, food-grade certified. Our MOQ is 5,000 pcs. What quantity are you looking at?", created_at: daysAgo(3) },
+    { id: 'm3', role: 'user', content: "I need 10,000 units. What's the price?", created_at: daysAgo(2) },
+    { id: 'm4', role: 'assistant', content: "For 10,000 pcs of 304 SS 500ml bottles, our price range is HKD $22–28/unit depending on finish and customization. This includes: body, lid, silicone seal, and gift box packaging.\n\nFOB Shanghai price: ~HKD $22/unit for plain finish.\nWith custom logo printing: ~HKD $25/unit.\n\nWould you like a formal quote?", created_at: daysAgo(2) },
+    { id: 'm5', role: 'user', content: "What about CIF Hamburg?", created_at: daysAgo(2) },
+    { id: 'm6', role: 'assistant', content: "For CIF Hamburg, we can arrange sea freight. Estimated CIF price: HKD $26–30/unit (depending on final specs). Transit time is about 25–30 days.\n\nWould you like me to prepare a detailed CIF quote?", created_at: daysAgo(2) },
+    { id: 'm7', role: 'human', content: "I've taken over this conversation. Let me prepare the CIF quote manually.", created_at: daysAgo(1) },
+    { id: 'm8', role: 'user', content: "Can you do $26 if I order 10,000? I need delivery to London by 30 November.", created_at: minutesAgo(12) },
   ],
 };
 
@@ -290,27 +520,6 @@ export const MOCK_FAQ_RULES: FaqRule[] = [
     keywords: ['payment', 'T/T', 'L/C', 'terms', 'pay'],
     answer: 'We accept: T/T (30% deposit, 70% before shipment), L/C at sight, and PayPal for orders under $5,000. New customers: T/T only.',
     priority: 2,
-  },
-  {
-    id: 'f3',
-    question_pattern: 'Sample policy and availability',
-    keywords: ['sample', 'samples', 'trial', 'test'],
-    answer: 'Free samples available for qualifying orders (MOQ must be met). Buyer pays freight. Sample delivery: 3–5 business days.',
-    priority: 3,
-  },
-  {
-    id: 'f4',
-    question_pattern: 'Lead time and production schedule',
-    keywords: ['lead time', 'how long', 'delivery time', 'production'],
-    answer: 'Standard lead time: 15–25 days depending on product and quantity. Rush orders available (add 10–15% premium). Current production capacity: ~50,000 units/month.',
-    priority: 4,
-  },
-  {
-    id: 'f5',
-    question_pattern: 'Quality certifications',
-    keywords: ['certificate', 'cert', 'quality', 'ISO', 'test report'],
-    answer: 'All products come with: ISO 9001:2015 certification, material test reports, and SGS inspection available on request. Full traceability for all materials.',
-    priority: 5,
   },
 ];
 
@@ -343,10 +552,10 @@ export interface AiGoal {
 export const MOCK_KNOWLEDGE_DOCUMENTS: KnowledgeDocument[] = [
   {
     id: 'k1',
-    name: 'Product_Catalog_2024.xlsx',
+    name: 'Product_Catalog_2026.xlsx',
     type: 'spreadsheet',
     content: 'Full product catalog with pricing tiers, MOQs, and specifications for all stainless steel, carbon steel, and aluminum products.',
-    addedAt: '2024-11-15',
+    addedAt: daysAgo(15),
     size: '45.2 KB',
   },
   {
@@ -354,24 +563,8 @@ export const MOCK_KNOWLEDGE_DOCUMENTS: KnowledgeDocument[] = [
     name: 'Shipping_Guide.pdf',
     type: 'pdf',
     content: 'FOB/CIF terms, shipping routes, transit times, and freight cost estimates for major global ports.',
-    addedAt: '2024-10-20',
+    addedAt: daysAgo(20),
     size: '128.5 KB',
-  },
-  {
-    id: 'k3',
-    name: 'Payment_Terms.txt',
-    type: 'text',
-    content: 'Payment methods: T/T (30% deposit, 70% before shipment), L/C at sight, PayPal under $5,000. New customers: T/T only.',
-    addedAt: '2024-09-01',
-    size: '2.1 KB',
-  },
-  {
-    id: 'k4',
-    name: 'Quality_Certifications.docx',
-    type: 'document',
-    content: 'ISO 9001:2015 certification, material test reports, SGS inspection availability, and full material traceability documentation.',
-    addedAt: '2024-08-10',
-    size: '89.3 KB',
   },
 ];
 
@@ -390,32 +583,17 @@ export const MOCK_AI_GOALS: AiGoal[] = [
     handoff_message: 'I\'ll connect you with our sales team for a personalized quote.',
     triggers: ['product', 'looking for', 'need'],
   },
-  {
-    id: 'g2',
-    title: 'Qualify High-Value Leads',
-    description: 'Identify customers with large orders and route them to human sales reps.',
-    enabled: true,
-    greeting: 'Welcome! I see you\'re interested in a bulk order. Let me help you get started.',
-    flow_steps: [
-      { id: 'fs4', trigger: 'Order value > $10,000', response: 'This looks like a significant order. Let me connect you with our senior sales team.' },
-    ],
-    handoff_message: 'A senior sales representative will contact you shortly.',
-    triggers: ['bulk', 'wholesale', 'large order'],
-  },
-  {
-    id: 'g3',
-    title: 'Handle Technical Inquiries',
-    description: 'Answer technical questions about specifications, certifications, and compatibility.',
-    enabled: false,
-    greeting: 'I can help with technical questions about our products. What would you like to know?',
-    flow_steps: [],
-    handoff_message: 'Let me connect you with our technical team for detailed specifications.',
-    triggers: ['spec', 'certification', 'technical'],
-  },
 ];
 
 export const MOCK_SETTINGS: CompanySettings = {
-  system_prompt: "You are a helpful and professional sales assistant for Pacific Trading Co., a Hong Kong-based steel and metal trading company. You respond to customer inquiries about our products (stainless steel bottles, containers, carbon steel pipes, flanges, aluminum sheets, and custom CNC parts). Always be friendly, provide accurate pricing, and guide customers toward placing an order. Use the product catalog and FAQ rules to answer questions. If you're unsure about something, say you'll check with the team.",
+  system_prompt: "You are a helpful and professional sales assistant for Pacific Trading Co., a Hong Kong-based steel and metal trading company.",
   response_delay_seconds: 2,
   chat_widget_enabled: true,
+};
+
+export const MOCK_COMPANY = {
+  name: 'Pacific Trading Co.',
+  industry: 'Steel & Metal Trading',
+  location: 'Hong Kong',
+  subscription_status: 'active',
 };

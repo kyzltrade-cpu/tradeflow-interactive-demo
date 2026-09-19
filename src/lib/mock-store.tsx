@@ -8,12 +8,18 @@ import {
   MOCK_MESSAGES,
   MOCK_FAQ_RULES,
   MOCK_SETTINGS,
+  MOCK_SUPPLIERS,
+  MOCK_INQUIRIES,
+  MOCK_RFQS,
+  MOCK_OPPORTUNITIES,
+  MOCK_QUOTES,
+  MOCK_FOLLOWUPS,
 } from './mock-data';
-import type { Product, Conversation, Message, FaqRule, CompanySettings, KnowledgeDocument, AiGoal } from './mock-data';
-
-export type { Product, Conversation, Message, FaqRule, CompanySettings, KnowledgeDocument, AiGoal };
-import { generateAIResponse } from './mock-ai';
+import type { Product, Conversation, Message, FaqRule, CompanySettings, KnowledgeDocument, AiGoal, Supplier, Inquiry, Rfq, Opportunity, Quote, FollowUp } from './mock-data';
 import { MOCK_KNOWLEDGE_DOCUMENTS, MOCK_AI_GOALS } from './mock-data';
+
+export type { Product, Conversation, Message, FaqRule, CompanySettings, KnowledgeDocument, AiGoal, Supplier, Inquiry, Rfq, Opportunity, Quote, FollowUp };
+import { generateAIResponse } from './mock-ai';
 
 interface DemoContextValue {
   conversations: Conversation[];
@@ -24,6 +30,12 @@ interface DemoContextValue {
   companyName: string;
   knowledgeDocuments: KnowledgeDocument[];
   aiGoals: AiGoal[];
+  suppliers: Supplier[];
+  inquiries: Inquiry[];
+  rfqs: Rfq[];
+  opportunities: Opportunity[];
+  quotes: Quote[];
+  followups: FollowUp[];
 
   // Conversation actions
   takeOver: (id: string) => void;
@@ -41,6 +53,12 @@ interface DemoContextValue {
   // Settings actions
   updateSettings: (settings: Partial<CompanySettings>) => void;
 
+  // Quote actions
+  approveQuote: (id: string) => void;
+  rejectQuote: (id: string) => void;
+  sendQuote: (id: string) => void;
+  simulateCustomerReply: (quoteId: string, type: 'accept' | 'negotiate' | 'reject') => void;
+
   // WhatsApp simulator
   sendWhatsAppMessage: (content: string) => string;
 
@@ -54,6 +72,10 @@ function deepClone<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj));
 }
 
+function minutesAgo(mins: number): string {
+  return new Date(Date.now() - mins * 60000).toISOString();
+}
+
 export function DemoProvider({ children }: { children: React.ReactNode }) {
   const [conversations, setConversations] = useState<Conversation[]>(() => deepClone(MOCK_CONVERSATIONS));
   const [messages, setMessages] = useState<Record<string, Message[]>>(() => deepClone(MOCK_MESSAGES));
@@ -62,6 +84,12 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<CompanySettings>(() => deepClone(MOCK_SETTINGS));
   const [knowledgeDocuments] = useState<KnowledgeDocument[]>(() => deepClone(MOCK_KNOWLEDGE_DOCUMENTS));
   const [aiGoals] = useState<AiGoal[]>(() => deepClone(MOCK_AI_GOALS));
+  const [suppliers] = useState<Supplier[]>(() => deepClone(MOCK_SUPPLIERS));
+  const [inquiries, setInquiries] = useState<Inquiry[]>(() => deepClone(MOCK_INQUIRIES));
+  const [rfqs, setRfqs] = useState<Rfq[]>(() => deepClone(MOCK_RFQS));
+  const [opportunities, setOpportunities] = useState<Opportunity[]>(() => deepClone(MOCK_OPPORTUNITIES));
+  const [quotes, setQuotes] = useState<Quote[]>(() => deepClone(MOCK_QUOTES));
+  const [followups, setFollowups] = useState<FollowUp[]>(() => deepClone(MOCK_FOLLOWUPS));
 
   const takeOver = useCallback((id: string) => {
     setConversations((prev) =>
@@ -73,7 +101,6 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     setConversations((prev) =>
       prev.map((c) => (c.id === id ? { ...c, status: 'ai' } : c))
     );
-    // Auto-respond to last user message
     const convMessages = messages[id] || [];
     const lastMsg = convMessages[convMessages.length - 1];
     if (lastMsg && lastMsg.role === 'user') {
@@ -160,6 +187,76 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     setProducts((prev) => prev.filter((p) => p.id !== id));
   }, []);
 
+  // Quote actions
+  const approveQuote = useCallback((id: string) => {
+    const now = new Date().toISOString();
+    setQuotes((prev) =>
+      prev.map((q) =>
+        q.id === id
+          ? {
+              ...q,
+              status: 'approved' as const,
+              approvedAt: now,
+              auditTrail: [...q.auditTrail, { timestamp: now, action: 'Approved', user: 'Demo User', details: 'Quote approved for sending' }],
+            }
+          : q
+      )
+    );
+  }, []);
+
+  const rejectQuote = useCallback((id: string) => {
+    const now = new Date().toISOString();
+    setQuotes((prev) =>
+      prev.map((q) =>
+        q.id === id
+          ? {
+              ...q,
+              status: 'rejected' as const,
+              auditTrail: [...q.auditTrail, { timestamp: now, action: 'Rejected', user: 'Demo User', details: 'Quote rejected' }],
+            }
+          : q
+      )
+    );
+  }, []);
+
+  const sendQuote = useCallback((id: string) => {
+    const now = new Date().toISOString();
+    setQuotes((prev) =>
+      prev.map((q) =>
+        q.id === id
+          ? {
+              ...q,
+              status: 'sent' as const,
+              sentAt: now,
+              auditTrail: [...q.auditTrail, { timestamp: now, action: 'Sent', user: 'Demo User', details: 'Quote sent to customer' }],
+            }
+          : q
+      )
+    );
+  }, []);
+
+  const simulateCustomerReply = useCallback((quoteId: string, type: 'accept' | 'negotiate' | 'reject') => {
+    const now = new Date().toISOString();
+    setQuotes((prev) =>
+      prev.map((q) => {
+        if (q.id !== quoteId) return q;
+        const newStatus: Quote['status'] = type === 'accept' ? 'accepted' : type === 'reject' ? 'rejected' : 'negotiating';
+        const action = type === 'accept' ? 'Customer accepted' : type === 'reject' ? 'Customer rejected' : 'Customer negotiating';
+        return {
+          ...q,
+          status: newStatus,
+          auditTrail: [...q.auditTrail, { timestamp: now, action, user: 'Customer', details: type === 'negotiate' ? 'Customer requested lower price' : `Quote ${newStatus}` }],
+        };
+      })
+    );
+    // Pause follow-ups if not accepted
+    if (type !== 'accept') {
+      setFollowups((prev) =>
+        prev.map((f) => (f.quoteId === quoteId ? { ...f, status: 'paused' as const } : f))
+      );
+    }
+  }, []);
+
   const sendWhatsAppMessage = useCallback((content: string): string => {
     const response = generateAIResponse(content);
     return response;
@@ -170,6 +267,11 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     setMessages(deepClone(MOCK_MESSAGES));
     setProducts(deepClone(MOCK_PRODUCTS));
     setSettings(deepClone(MOCK_SETTINGS));
+    setInquiries(deepClone(MOCK_INQUIRIES));
+    setRfqs(deepClone(MOCK_RFQS));
+    setOpportunities(deepClone(MOCK_OPPORTUNITIES));
+    setQuotes(deepClone(MOCK_QUOTES));
+    setFollowups(deepClone(MOCK_FOLLOWUPS));
   }, []);
 
   return (
@@ -183,6 +285,12 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
         companyName: MOCK_COMPANY.name,
         knowledgeDocuments,
         aiGoals,
+        suppliers,
+        inquiries,
+        rfqs,
+        opportunities,
+        quotes,
+        followups,
         takeOver,
         releaseToAI,
         bookmark,
@@ -193,6 +301,10 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
         updateProduct,
         deleteProduct,
         updateSettings,
+        approveQuote,
+        rejectQuote,
+        sendQuote,
+        simulateCustomerReply,
         sendWhatsAppMessage,
         resetDemo,
       }}

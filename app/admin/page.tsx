@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/lang';
 import { useDemo } from '@/lib/mock-store';
@@ -16,33 +16,15 @@ function formatTimeAgo(dateStr: string, now: number): string {
   return `${days}d ago`;
 }
 
-function SkeletonCard() {
-  return (
-    <div className="border rounded-[4px] p-4 md:p-5 animate-pulse" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
-      <div className="h-3 w-24 rounded mb-3" style={{ background: 'var(--border)' }} />
-      <div className="h-7 w-12 rounded" style={{ background: 'var(--border)' }} />
-    </div>
-  );
-}
-
-function SkeletonRow() {
-  return (
-    <div className="flex items-center gap-3 px-4 md:px-5 py-3 border-b last:border-b-0 animate-pulse" style={{ borderColor: 'var(--border)' }}>
-      <div className="w-8 h-8 rounded-full" style={{ background: 'var(--border)' }} />
-      <div className="flex-1 space-y-2">
-        <div className="h-3 w-28 rounded" style={{ background: 'var(--border)' }} />
-        <div className="h-3 w-48 rounded" style={{ background: 'var(--border)' }} />
-      </div>
-    </div>
-  );
+function formatCurrency(amount: number, currency: string): string {
+  return `${currency} $${amount.toLocaleString()}`;
 }
 
 export default function AdminPage() {
   const { t } = useLang();
-  const { conversations, products } = useDemo();
+  const { conversations, quotes, inquiries, opportunities, followups, suppliers } = useDemo();
   const [mounted, setMounted] = useState(false);
   const [now, setNow] = useState(0);
-  const [expandedSummaries, setExpandedSummaries] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setNow(Date.now());
@@ -51,37 +33,34 @@ export default function AdminPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const toggleSummary = (id: string) => {
-    setExpandedSummaries(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  // Pipeline KPIs
+  const pendingApproval = quotes.filter((q) => q.status === 'pending_approval').length;
+  const sentQuotes = quotes.filter((q) => q.status === 'sent').length;
+  const activeInquiries = inquiries.filter((i) => ['received', 'reviewing', 'extracting'].includes(i.status)).length;
+  const activeOpps = opportunities.filter((o) => ['lead', 'qualified', 'proposal', 'negotiation'].includes(o.stage)).length;
+  const dueFollowups = followups.filter((f) => f.status === 'pending').length;
+  const totalPipelineValue = opportunities
+    .filter((o) => ['lead', 'qualified', 'proposal', 'negotiation'].includes(o.stage))
+    .reduce((sum, o) => sum + o.estimatedValue, 0);
+
+  const stageColors: Record<string, { bg: string; color: string }> = {
+    lead: { bg: '#F3F4F6', color: '#6B7280' },
+    qualified: { bg: '#DBEAFE', color: '#2563EB' },
+    proposal: { bg: '#FEF3C7', color: '#D97706' },
+    negotiation: { bg: '#FED7AA', color: '#EA580C' },
+    won: { bg: '#D1FAE5', color: '#059669' },
+    lost: { bg: '#FEE2E2', color: '#DC2626' },
   };
 
-  const weekAgo = now - 7 * 24 * 60 * 60 * 1000;
-  const uniqueContacts = new Set(
-    conversations
-      .filter((c) => new Date(c.updated_at).getTime() > weekAgo)
-      .map((c) => c.contact_phone || c.contact_wechat_id || c.id)
-  );
-
-  const totalConversations = conversations.length;
-  const newClientsThisWeek = uniqueContacts.size;
-  const bookmarkedCount = conversations.filter((c) => c.status === 'bookmarked').length;
-  const productsCount = products.length;
-  const recentConversations = conversations.slice(0, 5);
-  const bookmarkedConversations = conversations.filter((c) => c.status === 'bookmarked').slice(0, 3);
-
-  const displayStatus = (conv: { status: string }) => {
-    if (conv.status === 'bookmarked') return 'flagged';
-    if (conv.status === 'human') return 'human';
-    return 'ai';
+  const quoteStatusColors: Record<string, { bg: string; color: string }> = {
+    draft: { bg: '#F3F4F6', color: '#6B7280' },
+    pending_approval: { bg: '#FEF3C7', color: '#D97706' },
+    approved: { bg: '#D1FAE5', color: '#059669' },
+    sent: { bg: '#DBEAFE', color: '#2563EB' },
+    accepted: { bg: '#D1FAE5', color: '#059669' },
+    rejected: { bg: '#FEE2E2', color: '#DC2626' },
+    negotiating: { bg: '#FED7AA', color: '#EA580C' },
   };
-
-  const contactName = (conv: { contact_name: string | null; contact_phone: string | null; contact_wechat_id: string | null; id: string }) =>
-    conv.contact_name || conv.contact_phone || conv.contact_wechat_id || 'Unknown';
 
   return (
     <div>
@@ -89,7 +68,7 @@ export default function AdminPage() {
         <div>
           <h1 className="text-[20px] md:text-[24px] font-semibold tracking-[-0.5px]">{t('Dashboard', '控制台')}</h1>
           <p className="text-[13px] md:text-[14px] mt-1" style={{ color: 'var(--text-muted)' }}>
-            {t('Overview of your AI assistant performance', 'AI 助手表現概覽')}
+            {t('Overview of your trading pipeline and quote operations', '交易管道和報價操作概覽')}
           </p>
         </div>
       </div>
@@ -98,187 +77,186 @@ export default function AdminPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
         <div className="border rounded-[4px] p-4 md:p-5" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
           <p className="text-[11px] md:text-[12px] font-medium uppercase tracking-[0.05em] mb-1.5 md:mb-2" style={{ color: 'var(--text-muted)' }}>
-            {t('Total conversations', '總對話數')}
+            {t('Pending approval', '待審批')}
           </p>
-          <p className="text-[22px] md:text-[28px] font-semibold tracking-[-0.5px]">{totalConversations}</p>
+          <p className="text-[22px] md:text-[28px] font-semibold tracking-[-0.5px]" style={{ color: pendingApproval > 0 ? '#D97706' : 'inherit' }}>{pendingApproval}</p>
         </div>
         <div className="border rounded-[4px] p-4 md:p-5" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
           <p className="text-[11px] md:text-[12px] font-medium uppercase tracking-[0.05em] mb-1.5 md:mb-2" style={{ color: 'var(--text-muted)' }}>
-            {t('New clients this week', '本週新客戶')}
+            {t('Active inquiries', '進行中詢價')}
           </p>
-          <p className="text-[22px] md:text-[28px] font-semibold tracking-[-0.5px]">{newClientsThisWeek}</p>
+          <p className="text-[22px] md:text-[28px] font-semibold tracking-[-0.5px]">{activeInquiries}</p>
         </div>
         <div className="border rounded-[4px] p-4 md:p-5" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
           <p className="text-[11px] md:text-[12px] font-medium uppercase tracking-[0.05em] mb-1.5 md:mb-2" style={{ color: 'var(--text-muted)' }}>
-            {t('Bookmarked', '已加書籤')}
+            {t('Pipeline value', '管道價值')}
           </p>
-          <p className="text-[22px] md:text-[28px] font-semibold tracking-[-0.5px]" style={{ color: 'var(--error)' }}>{bookmarkedCount}</p>
+          <p className="text-[22px] md:text-[28px] font-semibold tracking-[-0.5px]">{formatCurrency(totalPipelineValue, 'USD')}</p>
         </div>
         <div className="border rounded-[4px] p-4 md:p-5" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
           <p className="text-[11px] md:text-[12px] font-medium uppercase tracking-[0.05em] mb-1.5 md:mb-2" style={{ color: 'var(--text-muted)' }}>
-            {t('Products listed', '已上架產品')}
+            {t('Due follow-ups', '待跟進')}
           </p>
-          <p className="text-[22px] md:text-[28px] font-semibold tracking-[-0.5px]">{productsCount}</p>
+          <p className="text-[22px] md:text-[28px] font-semibold tracking-[-0.5px]" style={{ color: dueFollowups > 0 ? '#2563EB' : 'inherit' }}>{dueFollowups}</p>
         </div>
       </div>
 
-      {/* Bookmarked — needs attention */}
+      {/* Quotes pending approval */}
+      {pendingApproval > 0 && (
+        <div className="border rounded-[4px] mb-4" style={{ borderColor: '#FDE68A', background: '#FFFBEB' }}>
+          <div className="px-4 md:px-5 py-3 md:py-4 border-b flex items-center justify-between" style={{ borderColor: '#FDE68A' }}>
+            <div className="flex items-center gap-2">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+              <h2 className="text-[14px] md:text-[15px] font-semibold" style={{ color: '#92400E' }}>{t('Quotes awaiting approval', '待審批報價')}</h2>
+            </div>
+            <Link href="/admin/quotes" className="text-[12px] md:text-[13px] font-medium" style={{ color: '#D97706' }}>
+              {t('View all', '查看全部')}
+            </Link>
+          </div>
+          <div>
+            {quotes.filter((q) => q.status === 'pending_approval').map((quote) => {
+              const sc = quoteStatusColors[quote.status];
+              return (
+                <Link
+                  key={quote.id}
+                  href={`/admin/quotes/${quote.id}`}
+                  className="flex items-center justify-between px-4 md:px-5 py-3 border-b last:border-b-0 hover:bg-[#FFF9E6]"
+                  style={{ borderColor: '#FDE68A' }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-medium" style={{ background: '#FEF3C7', color: '#92400E' }}>
+                      {quote.displayId.slice(-3)}
+                    </div>
+                    <div>
+                      <p className="text-[13px] md:text-[14px] font-medium">{quote.customer}</p>
+                      <p className="text-[12px] md:text-[13px]" style={{ color: 'var(--text-muted)' }}>{quote.product} · {quote.quantity}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[13px] md:text-[14px] font-semibold">{formatCurrency(quote.customerPrice, quote.currency)}</p>
+                    <span className="text-[10px] md:text-[11px] px-2 py-0.5 rounded font-medium" style={{ background: sc.bg, color: sc.color }}>
+                      {quote.status.replace('_', ' ')}
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Active opportunities */}
       <div className="border rounded-[4px] mb-4" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
         <div className="px-4 md:px-5 py-3 md:py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border)' }}>
           <div className="flex items-center gap-2">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--error)" stroke="var(--error)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
-            </svg>
-            <h2 className="text-[14px] md:text-[15px] font-semibold">{t('Bookmarked for review', '已加書籤待審核')}</h2>
-            <span className="text-[11px] md:text-[12px] px-2 py-0.5 rounded font-medium" style={{ background: '#FEE8EA', color: 'var(--error)' }}>
-              {bookmarkedConversations.length}
+            <h2 className="text-[14px] md:text-[15px] font-semibold">{t('Active opportunities', '進行中商機')}</h2>
+            <span className="text-[11px] md:text-[12px] px-2 py-0.5 rounded font-medium" style={{ background: 'var(--accent-light)', color: 'var(--accent)' }}>
+              {activeOpps}
             </span>
           </div>
-          <Link href="/admin/conversations" className="text-[12px] md:text-[13px] font-medium" style={{ color: 'var(--accent)' }}>
+          <Link href="/admin/opportunities" className="text-[12px] md:text-[13px] font-medium" style={{ color: 'var(--accent)' }}>
             {t('View all', '查看全部')}
           </Link>
         </div>
         <div>
-          {bookmarkedConversations.length === 0 ? (
-            <div className="px-4 md:px-5 py-6 text-center">
-              <svg className="mx-auto mb-2" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/>
-              </svg>
-              <p className="text-[13px] md:text-[14px] font-medium" style={{ color: 'var(--text-muted)' }}>
-                {t('No bookmarked conversations', '沒有已加書籤的對話')}
-              </p>
-            </div>
-          ) : (
-            bookmarkedConversations.map((conv) => (
-              <div key={conv.id}>
-                <Link
-                  href="/admin/conversations"
-                  className="flex items-center justify-between px-4 md:px-5 py-3 border-b last:border-b-0 relative hover:bg-[#FEFBFB]"
-                  style={{ borderColor: 'var(--border)' }}
-                >
-                  <div className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ background: 'var(--error)' }} />
-                  <div className="flex items-center gap-3 ml-1 min-w-0">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-medium shrink-0" style={{ background: 'var(--bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
-                      {contactName(conv).charAt(0)}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-[13px] md:text-[14px] font-medium truncate">{contactName(conv)}</p>
-                        <span className="text-[10px] md:text-[11px] px-1.5 py-0.5 rounded shrink-0" style={{ background: '#FEE8EA', color: 'var(--error)' }}>
-                          {conv.channel}
-                        </span>
-                      </div>
-                      <p className="text-[12px] md:text-[13px] truncate" style={{ color: 'var(--text-muted)' }}>
-                        {conv.last_message?.content || '—'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 md:gap-3 flex-shrink-0 ml-2">
-                    <span className="text-[11px] md:text-[12px] hidden sm:inline" style={{ color: 'var(--text-muted)' }}>{mounted ? formatTimeAgo(conv.updated_at, now) : ''}</span>
-                    <span className="text-[12px] md:text-[13px] font-medium" style={{ color: 'var(--accent)' }}>{t('Review', '審核')}</span>
-                  </div>
-                </Link>
-                {conv.handoff_summary && (
-                  <div className="px-4 md:px-5 py-2 ml-4">
-                    <button
-                      onClick={(e) => { e.preventDefault(); toggleSummary(conv.id); }}
-                      className="flex items-center gap-1.5 text-[11px] font-medium"
-                      style={{ color: 'var(--text-muted)' }}
-                    >
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ transform: expandedSummaries.has(conv.id) ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>
-                        <path d="M9 18l6-6-6-6" />
-                      </svg>
-                      {t('Handoff Summary', '轉接摘要')}
-                    </button>
-                    {expandedSummaries.has(conv.id) && (
-                      <div className="mt-1.5 p-2.5 rounded text-[11px] leading-relaxed whitespace-pre-line" style={{ background: '#FEF3C7', color: '#92400E' }}>
-                        {conv.handoff_summary}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* Recent conversations */}
-      <div className="border rounded-[4px]" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
-        <div className="px-4 md:px-5 py-3 md:py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border)' }}>
-          <h2 className="text-[14px] md:text-[15px] font-semibold">{t('Recent conversations', '最近對話')}</h2>
-          <Link href="/admin/conversations" className="text-[12px] md:text-[13px] font-medium" style={{ color: 'var(--accent)' }}>
-            {t('View all', '查看全部')}
-          </Link>
-        </div>
-        {/* Desktop table */}
-        <table className="hidden md:table w-full text-[14px]">
-          <thead>
-            <tr className="border-b text-left" style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
-              <th className="px-5 py-3 font-medium">{t('Contact', '聯絡人')}</th>
-              <th className="px-5 py-3 font-medium">{t('Channel', '渠道')}</th>
-              <th className="px-5 py-3 font-medium">{t('Last message', '最新訊息')}</th>
-              <th className="px-5 py-3 font-medium">{t('Status', '狀態')}</th>
-              <th className="px-5 py-3 font-medium">{t('Time', '時間')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {recentConversations.map((conv) => {
-              const s = displayStatus(conv);
-              return (
-                <tr key={conv.id} className="border-b last:border-b-0 relative" style={{ borderColor: 'var(--border)' }}>
-                  {s === 'flagged' && (
-                    <td className="absolute left-0 top-0 bottom-0 w-[3px] p-0" style={{ background: 'var(--error)' }}></td>
-                  )}
-                  <td className="px-5 py-3 font-medium">{contactName(conv)}</td>
-                  <td className="px-5 py-3" style={{ color: 'var(--text-muted)' }}>{conv.channel}</td>
-                  <td className="px-5 py-3 truncate max-w-[300px]" style={{ color: 'var(--text-muted)' }}>{conv.last_message?.content || '—'}</td>
-                  <td className="px-5 py-3">
-                    <span
-                      className="text-[11px] px-2 py-0.5 rounded font-medium"
-                      style={{
-                        background: s === 'flagged' ? '#FEE8EA' : s === 'human' ? '#E8F5F1' : 'var(--accent-light)',
-                        color: s === 'flagged' ? 'var(--error)' : s === 'human' ? '#038153' : 'var(--accent)',
-                      }}
-                    >
-                      {s === 'flagged' ? t('Bookmarked', '已加書籤') : s === 'human' ? 'HUMAN' : 'AI'}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3 text-[13px]" style={{ color: 'var(--text-muted)' }}>{mounted ? formatTimeAgo(conv.updated_at, now) : ''}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        {/* Mobile list */}
-        <div className="md:hidden">
-          {recentConversations.map((conv) => {
-            const s = displayStatus(conv);
+          {opportunities.filter((o) => ['lead', 'qualified', 'proposal', 'negotiation'].includes(o.stage)).map((opp) => {
+            const sc = stageColors[opp.stage];
             return (
-              <div key={conv.id} className="px-4 py-3 border-b last:border-b-0 relative" style={{ borderColor: 'var(--border)' }}>
-                {s === 'flagged' && (
-                  <div className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ background: 'var(--error)' }} />
-                )}
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-[13px] font-medium truncate">{contactName(conv)}</p>
-                  <span className="text-[11px] shrink-0 ml-2" style={{ color: 'var(--text-muted)' }}>{mounted ? formatTimeAgo(conv.updated_at, now) : ''}</span>
+              <Link
+                key={opp.id}
+                href={`/admin/opportunities/${opp.id}`}
+                className="flex items-center justify-between px-4 md:px-5 py-3 border-b last:border-b-0 hover:bg-[#FEFBFB]"
+                style={{ borderColor: 'var(--border)' }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-medium" style={{ background: sc.bg, color: sc.color }}>
+                    {opp.displayId.slice(-3)}
+                  </div>
+                  <div>
+                    <p className="text-[13px] md:text-[14px] font-medium">{opp.company}</p>
+                    <p className="text-[12px] md:text-[13px]" style={{ color: 'var(--text-muted)' }}>{opp.contact} · {opp.nextAction}</p>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <p className="text-[12px] truncate" style={{ color: 'var(--text-muted)' }}>{conv.last_message?.content || '—'}</p>
-                  <span
-                    className="text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ml-2"
-                    style={{
-                      background: s === 'flagged' ? '#FEE8EA' : s === 'human' ? '#E8F5F1' : 'var(--accent-light)',
-                      color: s === 'flagged' ? 'var(--error)' : s === 'human' ? '#038153' : 'var(--accent)',
-                    }}
-                  >
-                    {s === 'flagged' ? t('Bookmarked', '已加書籤') : s === 'human' ? 'HUMAN' : 'AI'}
+                <div className="text-right">
+                  <p className="text-[13px] md:text-[14px] font-semibold">{formatCurrency(opp.estimatedValue, opp.currency)}</p>
+                  <span className="text-[10px] md:text-[11px] px-2 py-0.5 rounded font-medium" style={{ background: sc.bg, color: sc.color }}>
+                    {opp.stage}
                   </span>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>
+      </div>
+
+      {/* Recent inquiries */}
+      <div className="border rounded-[4px] mb-4" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
+        <div className="px-4 md:px-5 py-3 md:py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border)' }}>
+          <h2 className="text-[14px] md:text-[15px] font-semibold">{t('Recent inquiries', '最近詢價')}</h2>
+          <Link href="/admin/inquiries" className="text-[12px] md:text-[13px] font-medium" style={{ color: 'var(--accent)' }}>
+            {t('View all', '查看全部')}
+          </Link>
+        </div>
+        <div>
+          {inquiries.map((inq) => (
+            <Link
+              key={inq.id}
+              href={`/admin/inquiries/${inq.id}`}
+              className="flex items-center justify-between px-4 md:px-5 py-3 border-b last:border-b-0 hover:bg-[#FEFBFB]"
+              style={{ borderColor: 'var(--border)' }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-medium" style={{ background: 'var(--bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                  {inq.displayId.slice(-3)}
+                </div>
+                <div>
+                  <p className="text-[13px] md:text-[14px] font-medium">{inq.customer} · {inq.company}</p>
+                  <p className="text-[12px] md:text-[13px] truncate max-w-[300px]" style={{ color: 'var(--text-muted)' }}>{inq.originalMessage}</p>
+                </div>
+              </div>
+              <div className="text-right flex-shrink-0 ml-2">
+                <span className="text-[10px] md:text-[11px] px-2 py-0.5 rounded font-medium" style={{ background: '#FEF3C7', color: '#92400E' }}>
+                  {inq.status}
+                </span>
+                <p className="text-[11px] md:text-[12px] mt-1" style={{ color: 'var(--text-muted)' }}>{mounted ? formatTimeAgo(inq.receivedAt, now) : ''}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* Quick links */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        <Link href="/admin/quotes" className="border rounded-[4px] p-4 hover:shadow-sm transition-shadow" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mb-2">
+            <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          <p className="text-[13px] font-medium">{t('Quotes', '報價')}</p>
+          <p className="text-[12px]" style={{ color: 'var(--text-muted)' }}>{quotes.length} {t('total', '總計')}</p>
+        </Link>
+        <Link href="/admin/suppliers" className="border rounded-[4px] p-4 hover:shadow-sm transition-shadow" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mb-2">
+            <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+          </svg>
+          <p className="text-[13px] font-medium">{t('Suppliers', '供應商')}</p>
+          <p className="text-[12px]" style={{ color: 'var(--text-muted)' }}>{suppliers.length} {t('verified', '已驗證')}</p>
+        </Link>
+        <Link href="/admin/follow-ups" className="border rounded-[4px] p-4 hover:shadow-sm transition-shadow" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mb-2">
+            <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <p className="text-[13px] font-medium">{t('Follow-ups', '跟進')}</p>
+          <p className="text-[12px]" style={{ color: 'var(--text-muted)' }}>{dueFollowups} {t('due', '到期')}</p>
+        </Link>
+        <Link href="/admin/conversations" className="border rounded-[4px] p-4 hover:shadow-sm transition-shadow" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mb-2">
+            <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+          </svg>
+          <p className="text-[13px] font-medium">{t('Conversations', '對話')}</p>
+          <p className="text-[12px]" style={{ color: 'var(--text-muted)' }}>{conversations.length} {t('active', '活躍')}</p>
+        </Link>
       </div>
     </div>
   );

@@ -1,63 +1,45 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useLang } from '@/lib/lang';
-
-type InquiryStatus = 'received' | 'quoting' | 'converted';
-
-interface Inquiry {
-  id: string;
-  displayId: string;
-  customer: string;
-  channel: string;
-  status: InquiryStatus;
-  date: string;
-}
-
-const mockInquiries: Inquiry[] = [
-  { id: 'inq-1', displayId: 'INQ-2024-001', customer: 'Acme Corp', channel: 'WhatsApp', status: 'converted', date: '2024-01-14' },
-  { id: 'inq-2', displayId: 'INQ-2024-002', customer: 'Global Trade Ltd', channel: 'Email', status: 'quoting', date: '2024-01-17' },
-  { id: 'inq-3', displayId: 'INQ-2024-003', customer: 'Pacific Imports', channel: 'WhatsApp', status: 'received', date: '2024-01-21' },
-  { id: 'inq-4', displayId: 'INQ-2024-004', customer: 'Asia Electronics', channel: 'WeChat', status: 'quoting', date: '2024-01-24' },
-];
-
-const statusConfig: Record<InquiryStatus, { bg: string; color: string; label: string }> = {
-  received: { bg: '#DBEAFE', color: '#2563EB', label: 'Received' },
-  quoting: { bg: '#FEF3C7', color: '#92400E', label: 'Quoting' },
-  converted: { bg: '#D1FAE5', color: '#059669', label: 'Converted' },
-};
-
-const tabs: { key: InquiryStatus | 'all'; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'received', label: 'Received' },
-  { key: 'quoting', label: 'Quoting' },
-  { key: 'converted', label: 'Converted' },
-];
-
-const tabLabels: Record<string, string> = {
-  All: '全部',
-  Received: '已接收',
-  Quoting: '報價中',
-  Converted: '已轉化',
-};
+import { useDemo } from '@/lib/mock-store';
 
 export default function InquiriesPage() {
   const { t } = useLang();
-  const [activeTab, setActiveTab] = useState<InquiryStatus | 'all'>('all');
-  const filtered = activeTab === 'all' ? mockInquiries : mockInquiries.filter((inq) => inq.status === activeTab);
+  const { inquiries } = useDemo();
+  const [activeTab, setActiveTab] = useState<string>('all');
+
+  const tabs = [
+    { key: 'all', label: 'All', zh: '全部' },
+    { key: 'received', label: 'Received', zh: '已接收' },
+    { key: 'reviewing', label: 'Reviewing', zh: '審核中' },
+    { key: 'quoted', label: 'Quoted', zh: '已報價' },
+    { key: 'converted', label: 'Converted', zh: '已轉化' },
+  ];
+
+  const filtered = activeTab === 'all' ? inquiries : inquiries.filter((inq) => inq.status === activeTab);
+
+  const statusColors: Record<string, { bg: string; color: string }> = {
+    received: { bg: '#DBEAFE', color: '#2563EB' },
+    reviewing: { bg: '#FEF3C7', color: '#D97706' },
+    extracting: { bg: '#F3F4F6', color: '#6B7280' },
+    quoted: { bg: '#D1FAE5', color: '#059669' },
+    converted: { bg: '#D1FAE5', color: '#059669' },
+    closed: { bg: '#F3F4F6', color: '#6B7280' },
+  };
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6 md:mb-8">
         <div>
-          <h1 className="text-[20px] md:text-[24px] font-semibold tracking-[-0.5px]">{t('Inquiries', '查詢')}</h1>
+          <h1 className="text-[20px] md:text-[24px] font-semibold tracking-[-0.5px]">{t('Inquiries', '詢價')}</h1>
           <p className="text-[13px] md:text-[14px] mt-1" style={{ color: 'var(--text-muted)' }}>
-            {t('Track incoming customer inquiries', '追踪收到的客戶查詢')}
+            {t('Track incoming customer inquiries', '追踪收到的客戶詢價')}
           </p>
         </div>
       </div>
 
-      {/* Status filter tabs */}
       <div className="flex items-center gap-1 mb-4 overflow-x-auto">
         {tabs.map((tab) => (
           <button
@@ -70,19 +52,18 @@ export default function InquiriesPage() {
               border: `1px solid ${activeTab === tab.key ? 'var(--accent)' : 'var(--border)'}`,
             }}
           >
-            {t(tab.label, tabLabels[tab.label])}
+            {t(tab.label, tab.zh)}
           </button>
         ))}
       </div>
 
-      {/* Inquiries table */}
       <section className="border rounded-[4px] p-5" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)' }}>
                 <th className="pb-3 text-[12px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-                  {t('Inquiry ID', '查詢編號')}
+                  {t('Inquiry ID', '詢價編號')}
                 </th>
                 <th className="pb-3 text-[12px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
                   {t('Customer', '客戶')}
@@ -100,18 +81,27 @@ export default function InquiriesPage() {
             </thead>
             <tbody>
               {filtered.map((inq) => {
-                const cfg = statusConfig[inq.status];
+                const sc = statusColors[inq.status] || statusColors.received;
                 return (
                   <tr key={inq.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td className="py-3 text-[13px] font-medium">{inq.displayId}</td>
-                    <td className="py-3 text-[13px]">{inq.customer}</td>
+                    <td className="py-3">
+                      <Link href={`/admin/inquiries/${inq.id}`} className="text-[13px] font-medium" style={{ color: 'var(--accent)' }}>
+                        {inq.displayId}
+                      </Link>
+                    </td>
+                    <td className="py-3 text-[13px]">
+                      <p className="font-medium">{inq.customer}</p>
+                      <p className="text-[12px]" style={{ color: 'var(--text-muted)' }}>{inq.company}</p>
+                    </td>
                     <td className="py-3 text-[13px]">{inq.channel}</td>
                     <td className="py-3">
-                      <span className="px-2 py-0.5 rounded-full text-[11px] font-medium" style={{ background: cfg.bg, color: cfg.color }}>
-                        {t(cfg.label, tabLabels[cfg.label])}
+                      <span className="px-2 py-0.5 rounded-full text-[11px] font-medium" style={{ background: sc.bg, color: sc.color }}>
+                        {inq.status}
                       </span>
                     </td>
-                    <td className="py-3 text-[13px]" style={{ color: 'var(--text-muted)' }}>{inq.date}</td>
+                    <td className="py-3 text-[13px]" style={{ color: 'var(--text-muted)' }}>
+                      {new Date(inq.receivedAt).toLocaleDateString()}
+                    </td>
                   </tr>
                 );
               })}
@@ -119,21 +109,6 @@ export default function InquiriesPage() {
           </table>
         </div>
       </section>
-
-      {/* Demo note */}
-      <div className="border rounded-[4px] p-4 mt-6" style={{ borderColor: '#FDE68A', background: '#FFFBEB' }}>
-        <div className="flex items-start gap-2">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 mt-0.5">
-            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
-          <div>
-            <p className="text-[12px] font-semibold" style={{ color: '#92400E' }}>{t('Demo Mode', '示範模式')}</p>
-            <p className="text-[12px] mt-0.5" style={{ color: '#78350F' }}>
-              {t('Inquiry data shown is for demonstration only.', '顯示的查詢數據僅供示範。')}
-            </p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
