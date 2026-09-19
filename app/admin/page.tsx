@@ -16,6 +16,27 @@ function formatTimeAgo(dateStr: string, now: number): string {
   return `${days}d ago`;
 }
 
+function SkeletonCard() {
+  return (
+    <div className="border rounded-[4px] p-4 md:p-5 animate-pulse" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
+      <div className="h-3 w-24 rounded mb-3" style={{ background: 'var(--border)' }} />
+      <div className="h-7 w-12 rounded" style={{ background: 'var(--border)' }} />
+    </div>
+  );
+}
+
+function SkeletonRow() {
+  return (
+    <div className="flex items-center gap-3 px-4 md:px-5 py-3 border-b last:border-b-0 animate-pulse" style={{ borderColor: 'var(--border)' }}>
+      <div className="w-8 h-8 rounded-full" style={{ background: 'var(--border)' }} />
+      <div className="flex-1 space-y-2">
+        <div className="h-3 w-28 rounded" style={{ background: 'var(--border)' }} />
+        <div className="h-3 w-48 rounded" style={{ background: 'var(--border)' }} />
+      </div>
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const { t } = useLang();
   const { conversations, products } = useDemo();

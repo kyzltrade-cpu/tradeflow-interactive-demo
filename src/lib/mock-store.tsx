@@ -34,8 +34,8 @@ interface DemoContextValue {
   sendHumanMessage: (conversationId: string, content: string) => void;
 
   // Product actions
-  addProduct: (product: { name: string; description: string; moq: string; price_range: string; category: string }) => void;
-  updateProduct: (id: string, product: { name: string; description: string; moq: string; price_range: string; category: string }) => void;
+  addProduct: (product: { name: string; description: string; moq: string; price_range: string; category: string; photos?: string[] }) => void;
+  updateProduct: (id: string, product: { name: string; description: string; moq: string; price_range: string; category: string; photos?: string[] }) => void;
   deleteProduct: (id: string) => void;
 
   // Settings actions
@@ -142,7 +142,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     setSettings((prev) => ({ ...prev, ...partial }));
   }, []);
 
-  const addProduct = useCallback((product: { name: string; description: string; moq: string; price_range: string; category: string }) => {
+  const addProduct = useCallback((product: { name: string; description: string; moq: string; price_range: string; category: string; photos?: string[] }) => {
     const newProduct: Product = {
       id: `p${Date.now()}`,
       ...product,
@@ -150,7 +150,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     setProducts((prev) => [...prev, newProduct]);
   }, []);
 
-  const updateProduct = useCallback((id: string, product: { name: string; description: string; moq: string; price_range: string; category: string }) => {
+  const updateProduct = useCallback((id: string, product: { name: string; description: string; moq: string; price_range: string; category: string; photos?: string[] }) => {
     setProducts((prev) =>
       prev.map((p) => (p.id === id ? { ...p, ...product } : p))
     );

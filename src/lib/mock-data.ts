@@ -5,6 +5,7 @@ export interface Product {
   moq: string;
   price_range: string;
   category: string;
+  photos?: string[];
 }
 
 export interface Message {
@@ -336,6 +337,7 @@ export interface AiGoal {
   greeting: string;
   flow_steps: FlowStep[];
   handoff_message: string;
+  triggers: string[];
 }
 
 export const MOCK_KNOWLEDGE_DOCUMENTS: KnowledgeDocument[] = [
@@ -386,6 +388,7 @@ export const MOCK_AI_GOALS: AiGoal[] = [
       { id: 'fs3', trigger: 'Customer mentions delivery terms', response: 'Perfect, let me prepare a quote for you.' },
     ],
     handoff_message: 'I\'ll connect you with our sales team for a personalized quote.',
+    triggers: ['product', 'looking for', 'need'],
   },
   {
     id: 'g2',
@@ -397,6 +400,7 @@ export const MOCK_AI_GOALS: AiGoal[] = [
       { id: 'fs4', trigger: 'Order value > $10,000', response: 'This looks like a significant order. Let me connect you with our senior sales team.' },
     ],
     handoff_message: 'A senior sales representative will contact you shortly.',
+    triggers: ['bulk', 'wholesale', 'large order'],
   },
   {
     id: 'g3',
@@ -406,6 +410,7 @@ export const MOCK_AI_GOALS: AiGoal[] = [
     greeting: 'I can help with technical questions about our products. What would you like to know?',
     flow_steps: [],
     handoff_message: 'Let me connect you with our technical team for detailed specifications.',
+    triggers: ['spec', 'certification', 'technical'],
   },
 ];
 

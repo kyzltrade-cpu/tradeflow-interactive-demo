@@ -12,7 +12,22 @@ const NAV_ITEMS = [
   { href: '/admin/products', en: 'Products', zh: '產品', icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4' },
   { href: '/admin/knowledge', en: 'Knowledge Base', zh: '知識庫', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' },
   { href: '/admin/faq', en: 'FAQ Rules', zh: 'FAQ 規則', icon: 'M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+  { href: '/admin/billing', en: 'Billing', zh: '帳單', icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z' },
+  { href: '/admin/follow-ups', en: 'Follow-ups', zh: '跟進', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
   { href: '/admin/settings', en: 'Settings', zh: '設定', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
+];
+
+const NAV_GROUPS = [
+  {
+    label: 'Sales',
+    zhLabel: '銷售',
+    items: [
+      { href: '/admin/quotes', en: 'Quotes', zh: '報價', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
+      { href: '/admin/inquiries', en: 'Inquiries', zh: '詢價', icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' },
+      { href: '/admin/suppliers', en: 'Suppliers', zh: '供應商', icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4' },
+      { href: '/admin/opportunities', en: 'Opportunities', zh: '商機', icon: 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6' },
+    ],
+  },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -136,6 +151,57 @@ function AdminShell({ children }: { children: React.ReactNode }) {
               </Link>
             );
           })}
+          {!collapsed && NAV_GROUPS.map((group) => (
+            <div key={group.label} className="mt-4">
+              <p className="px-5 mb-1 text-[11px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                {t(group.label, group.zhLabel)}
+              </p>
+              {group.items.map((item) => {
+                const isActive = pathname.startsWith(item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setSidebarOpen(false)}
+                    className="flex items-center gap-3 py-2.5 px-5 text-[14px]"
+                    style={{
+                      color: isActive ? 'var(--accent)' : 'var(--text-muted)',
+                      fontWeight: isActive ? 500 : 400,
+                      background: isActive ? 'var(--accent-light)' : 'transparent',
+                    }}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                      <path d={item.icon} />
+                    </svg>
+                    {t(item.en, item.zh)}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
+          {collapsed && NAV_GROUPS.map((group) =>
+            group.items.map((item) => {
+              const isActive = pathname.startsWith(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setSidebarOpen(false)}
+                  className="flex items-center justify-center py-2.5 text-[14px]"
+                  title={t(item.en, item.zh)}
+                  style={{
+                    color: isActive ? 'var(--accent)' : 'var(--text-muted)',
+                    fontWeight: isActive ? 500 : 400,
+                    background: isActive ? 'var(--accent-light)' : 'transparent',
+                  }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                    <path d={item.icon} />
+                  </svg>
+                </Link>
+              );
+            })
+          )}
         </nav>
         <div className={`border-t ${collapsed ? 'px-2 py-3' : 'px-3 py-3'}`} style={{ borderColor: 'var(--border)' }}>
           {!collapsed ? (
