@@ -9,22 +9,41 @@ import { MOCK_SUPPLIERS } from '@/lib/mock-data';
 
 const statusConfig: Record<Quote['status'], { bg: string; color: string; label: string }> = {
   draft: { bg: '#F3F4F6', color: '#6B7280', label: 'Draft' },
-  pending_approval: { bg: '#FEF3C7', color: '#92400E', label: 'Pending Approval' },
+  in_review: { bg: '#FEF3C7', color: '#92400E', label: 'In Review' },
   approved: { bg: '#D1FAE5', color: '#059669', label: 'Approved' },
   sent: { bg: '#DBEAFE', color: '#2563EB', label: 'Sent' },
   accepted: { bg: '#D1FAE5', color: '#059669', label: 'Accepted' },
   rejected: { bg: '#FEE2E2', color: '#DC2626', label: 'Rejected' },
   negotiating: { bg: '#FEF3C7', color: '#92400E', label: 'Negotiating' },
+  expired: { bg: '#F3F4F6', color: '#6B7280', label: 'Expired' },
 };
 
 const statusLabels: Record<Quote['status'], string> = {
   draft: '草稿',
-  pending_approval: '待審批',
+  in_review: '審查中',
   approved: '已批准',
   sent: '已發送',
   accepted: '已接受',
   rejected: '已拒絕',
   negotiating: '議價中',
+  expired: '已過期',
+};
+
+const sourceConfig: Record<string, { bg: string; color: string; label: string }> = {
+  supplier_quoted: { bg: '#D1FAE5', color: '#059669', label: 'Supplier quoted' },
+  user_entered: { bg: '#DBEAFE', color: '#2563EB', label: 'User entered' },
+  system_estimate: { bg: '#FEF3C7', color: '#92400E', label: 'System estimate' },
+  external_data: { bg: '#E0E7FF', color: '#4F46E5', label: 'External data' },
+  assumption: { bg: '#FEE2E2', color: '#DC2626', label: 'Assumption' },
+  unverified: { bg: '#FEE2E2', color: '#DC2626', label: 'Unverified' },
+};
+
+const certStatusConfig: Record<string, { bg: string; color: string; label: string }> = {
+  claimed: { bg: '#FEF3C7', color: '#92400E', label: 'Claimed' },
+  documents_available: { bg: '#DBEAFE', color: '#2563EB', label: 'Docs available' },
+  reviewed: { bg: '#D1FAE5', color: '#059669', label: 'Reviewed' },
+  verified: { bg: '#D1FAE5', color: '#059669', label: 'Verified' },
+  not_confirmed: { bg: '#FEE2E2', color: '#DC2626', label: 'Not confirmed' },
 };
 
 function formatDate(iso: string) {
@@ -62,6 +81,8 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
   }
 
   const cfg = statusConfig[quote.status];
+  const hasBlockedFields = quote.blockedByMissingFields.length > 0;
+  const selectedSupplier = MOCK_SUPPLIERS.find((s) => s.id === quote.supplierId);
 
   function openPdfPreview() {
     if (!quote) return;
@@ -131,6 +152,51 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
         </div>
       </div>
 
+      {hasBlockedFields && (
+        <div className="border rounded-[4px] p-4 mb-6" style={{ borderColor: '#FCA5A5', background: '#FEF2F2' }}>
+          <div className="flex items-start gap-2">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 mt-0.5">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <div>
+              <p className="text-[12px] font-semibold" style={{ color: '#991B1B' }}>
+                Cannot send quote — missing customer-confirmed fields
+              </p>
+              <p className="text-[12px] mt-1" style={{ color: '#7F1D1D' }}>
+                {quote.blockedByMissingFields.join(', ')} — must be confirmed with customer before approval.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {quote.warnings.length > 0 && !hasBlockedFields && (
+        <div className="border rounded-[4px] p-4 mb-6" style={{ borderColor: '#FDE68A', background: '#FFFBEB' }}>
+          <div className="flex items-start gap-2">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 mt-0.5">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            <div>
+              <p className="text-[12px] font-semibold" style={{ color: '#92400E' }}>
+                {quote.warnings.length} warnings — review before sending
+              </p>
+              <ul className="mt-1 space-y-0.5">
+                {quote.warnings.slice(0, 3).map((w, i) => (
+                  <li key={i} className="text-[12px]" style={{ color: '#78350F' }}>{w}</li>
+                ))}
+                {quote.warnings.length > 3 && (
+                  <li className="text-[12px]" style={{ color: '#78350F' }}>...and {quote.warnings.length - 3} more</li>
+                )}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left column: main content */}
         <div className="lg:col-span-2 space-y-6">
@@ -172,6 +238,7 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--border)' }}>
                     <th className="pb-3 text-[12px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Item</th>
+                    <th className="pb-3 text-[12px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Source</th>
                     <th className="pb-3 text-[12px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Details</th>
                     <th className="pb-3 text-[12px] font-semibold uppercase tracking-wider text-right" style={{ color: 'var(--text-muted)' }}>Amount</th>
                   </tr>
@@ -179,8 +246,16 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
                 <tbody>
                   {quote.costBreakdown.map((c, i) => (
                     <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
-                      <td className="py-2.5 text-[13px]">{c.label}</td>
-                      <td className="py-2.5 text-[12px]" style={{ color: 'var(--text-muted)' }}>{c.notes || '-'}</td>
+                      <td className="py-2.5 text-[13px]">
+                        {c.label}
+                        {!c.confirmed && <span className="ml-1 text-[10px] px-1 py-0.5 rounded" style={{ background: '#FEF3C7', color: '#92400E' }}>unconfirmed</span>}
+                      </td>
+                      <td className="py-2.5">
+                        <span className="px-2 py-0.5 rounded-full text-[11px] font-medium" style={{ background: sourceConfig[c.source]?.bg || '#F3F4F6', color: sourceConfig[c.source]?.color || '#6B7280' }}>
+                          {sourceConfig[c.source]?.label || c.source}
+                        </span>
+                      </td>
+                      <td className="py-2.5 text-[12px]" style={{ color: 'var(--text-muted)' }}>{c.sourceDetail || c.notes || '-'}</td>
                       <td className="py-2.5 text-[13px] font-medium text-right">{formatCurrency(c.amount, quote.currency)}</td>
                     </tr>
                   ))}
@@ -236,7 +311,12 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
                     <td className="py-2.5 text-[13px] text-right">$2.80/pc</td>
                     <td className="py-2.5 text-[13px] text-right">5,000</td>
                     <td className="py-2.5 text-[13px] text-right">28 days</td>
-                    <td className="py-2.5 text-[12px]">FDA available</td>
+                    <td className="py-2.5 text-[12px]">
+                      <div className="flex flex-wrap gap-1">
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-medium" style={{ background: '#D1FAE5', color: '#059669' }}>ISO 9001: Verified</span>
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-medium" style={{ background: '#DBEAFE', color: '#2563EB' }}>FDA: Docs available</span>
+                      </div>
+                    </td>
                     <td className="py-2.5 text-[12px]">7 days</td>
                     <td className="py-2.5"><span className="text-[11px] px-1.5 py-0.5 rounded font-medium" style={{ background: '#D1FAE5', color: '#059669' }}>Low</span></td>
                   </tr>
@@ -245,7 +325,12 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
                     <td className="py-2.5 text-[13px] text-right">$2.55/pc</td>
                     <td className="py-2.5 text-[13px] text-right">10,000</td>
                     <td className="py-2.5 text-[13px] text-right">42 days</td>
-                    <td className="py-2.5 text-[12px]">Not confirmed</td>
+                    <td className="py-2.5 text-[12px]">
+                      <div className="flex flex-wrap gap-1">
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-medium" style={{ background: '#FEF3C7', color: '#92400E' }}>ISO 9001: Claimed</span>
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-medium" style={{ background: '#FEE2E2', color: '#DC2626' }}>FDA: Not confirmed</span>
+                      </div>
+                    </td>
                     <td className="py-2.5 text-[12px]">3 days</td>
                     <td className="py-2.5"><span className="text-[11px] px-1.5 py-0.5 rounded font-medium" style={{ background: '#FEF3C7', color: '#92400E' }}>Medium</span></td>
                   </tr>
@@ -254,7 +339,13 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
                     <td className="py-2.5 text-[13px] text-right">$3.10/pc</td>
                     <td className="py-2.5 text-[13px] text-right">3,000</td>
                     <td className="py-2.5 text-[13px] text-right">21 days</td>
-                    <td className="py-2.5 text-[12px]">FDA confirmed</td>
+                    <td className="py-2.5 text-[12px]">
+                      <div className="flex flex-wrap gap-1">
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-medium" style={{ background: '#D1FAE5', color: '#059669' }}>ISO 9001: Verified</span>
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-medium" style={{ background: '#D1FAE5', color: '#059669' }}>FDA: Reviewed</span>
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-medium" style={{ background: '#FEF3C7', color: '#92400E' }}>BSCI: Claimed</span>
+                      </div>
+                    </td>
                     <td className="py-2.5 text-[12px]">14 days</td>
                     <td className="py-2.5"><span className="text-[11px] px-1.5 py-0.5 rounded font-medium" style={{ background: '#D1FAE5', color: '#059669' }}>Low</span></td>
                   </tr>
@@ -309,10 +400,16 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
           <section className="border rounded-[4px] p-5" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
             <p className="text-[11px] uppercase tracking-wider font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>Actions</p>
 
-            {/* Approval gate: pending_approval */}
-            {quote.status === 'pending_approval' && (
+            {/* Approval gate: in_review */}
+            {quote.status === 'in_review' && (
               <div className="space-y-2">
-                {confirmAction === 'approve' ? (
+                {hasBlockedFields ? (
+                  <div className="border rounded-[4px] p-3" style={{ borderColor: '#FCA5A5', background: '#FEF2F2' }}>
+                    <p className="text-[12px]" style={{ color: '#991B1B' }}>
+                      Approval blocked. Confirm missing fields with customer first.
+                    </p>
+                  </div>
+                ) : confirmAction === 'approve' ? (
                   <div className="border rounded-[4px] p-3" style={{ borderColor: '#D1FAE5', background: '#F0FDF4' }}>
                     <p className="text-[12px] mb-2" style={{ color: '#166534' }}>Approve this quote?</p>
                     <div className="flex gap-2">

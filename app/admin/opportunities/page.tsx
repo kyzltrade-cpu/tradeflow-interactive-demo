@@ -9,12 +9,17 @@ export default function OpportunitiesPage() {
   const { opportunities } = useDemo();
 
   const stageColors: Record<string, { bg: string; color: string }> = {
-    lead: { bg: '#F3F4F6', color: '#6B7280' },
+    new: { bg: '#F3F4F6', color: '#6B7280' },
+    needs_information: { bg: '#FEF3C7', color: '#92400E' },
     qualified: { bg: '#DBEAFE', color: '#2563EB' },
-    proposal: { bg: '#FEF3C7', color: '#D97706' },
-    negotiation: { bg: '#FED7AA', color: '#EA580C' },
+    sourcing: { bg: '#D1FAE5', color: '#059669' },
+    quote_draft: { bg: '#E0E7FF', color: '#4F46E5' },
+    pending_approval: { bg: '#FEF3C7', color: '#D97706' },
+    sent: { bg: '#DBEAFE', color: '#2563EB' },
+    negotiating: { bg: '#FED7AA', color: '#EA580C' },
     won: { bg: '#D1FAE5', color: '#059669' },
     lost: { bg: '#FEE2E2', color: '#DC2626' },
+    expired: { bg: '#F3F4F6', color: '#6B7280' },
   };
 
   const priorityColors: Record<string, { bg: string; color: string }> = {
@@ -24,7 +29,7 @@ export default function OpportunitiesPage() {
   };
 
   const totalValue = opportunities
-    .filter((o) => ['lead', 'qualified', 'proposal', 'negotiation'].includes(o.stage))
+    .filter((o) => ['new', 'needs_information', 'qualified', 'sourcing', 'quote_draft', 'pending_approval', 'sent', 'negotiating'].includes(o.stage))
     .reduce((sum, o) => sum + o.estimatedValue, 0);
 
   return (

@@ -5,18 +5,23 @@ import Link from 'next/link';
 import { useDemo } from '@/lib/mock-store';
 import { useLang } from '@/lib/lang';
 
-type Stage = 'lead' | 'qualified' | 'proposal' | 'negotiation' | 'won' | 'lost';
+type Stage = 'new' | 'needs_information' | 'qualified' | 'sourcing' | 'quote_draft' | 'pending_approval' | 'sent' | 'negotiating' | 'won' | 'lost' | 'expired';
 type Priority = 'low' | 'medium' | 'high';
 
-const STAGES: Stage[] = ['lead', 'qualified', 'proposal', 'negotiation', 'won', 'lost'];
+const STAGES: Stage[] = ['new', 'needs_information', 'qualified', 'sourcing', 'quote_draft', 'pending_approval', 'sent', 'negotiating', 'won', 'lost'];
 
 const stageConfig: Record<Stage, { bg: string; color: string; label: string }> = {
-  lead: { bg: '#F3F4F6', color: '#6B7280', label: 'Lead' },
+  new: { bg: '#F3F4F6', color: '#6B7280', label: 'New' },
+  needs_information: { bg: '#FEE2E2', color: '#DC2626', label: 'Needs Info' },
   qualified: { bg: '#DBEAFE', color: '#2563EB', label: 'Qualified' },
-  proposal: { bg: '#FEF3C7', color: '#92400E', label: 'Proposal' },
-  negotiation: { bg: '#FED7AA', color: '#C2410C', label: 'Negotiation' },
+  sourcing: { bg: '#E0E7FF', color: '#4F46E5', label: 'Sourcing' },
+  quote_draft: { bg: '#FEF3C7', color: '#92400E', label: 'Quote Draft' },
+  pending_approval: { bg: '#FDE68A', color: '#92400E', label: 'Pending Approval' },
+  sent: { bg: '#DBEAFE', color: '#2563EB', label: 'Sent' },
+  negotiating: { bg: '#FED7AA', color: '#C2410C', label: 'Negotiating' },
   won: { bg: '#D1FAE5', color: '#059669', label: 'Won' },
   lost: { bg: '#FEE2E2', color: '#DC2626', label: 'Lost' },
+  expired: { bg: '#F3F4F6', color: '#6B7280', label: 'Expired' },
 };
 
 const priorityConfig: Record<Priority, { bg: string; color: string; label: string }> = {
@@ -26,12 +31,17 @@ const priorityConfig: Record<Priority, { bg: string; color: string; label: strin
 };
 
 const stageLabels: Record<string, string> = {
-  Lead: '潛在客戶',
+  New: '新建',
+  'Needs Info': '需要資訊',
   Qualified: '已資格審核',
-  Proposal: '提議中',
+  Sourcing: '採購中',
+  'Quote Draft': '報價草稿',
+  'Pending Approval': '待審批',
+  Sent: '已發送',
   Negotiation: '談判中',
   Won: '已成交',
   Lost: '已流失',
+  Expired: '已過期',
 };
 
 const priorityLabels: Record<string, string> = {
@@ -102,6 +112,9 @@ export default function OpportunityDetailPage() {
           </h1>
           <p className="text-[13px] md:text-[14px] mt-1" style={{ color: 'var(--text-muted)' }}>
             {t('Contact', '聯絡人')}: {opp.contact}
+          </p>
+          <p className="text-[12px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+            {t('Role', '角色')}: {opp.commercialRole.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -194,7 +207,14 @@ export default function OpportunityDetailPage() {
                 <circle cx="12" cy="12" r="10" />
                 <polyline points="12 6 12 12 16 14" />
               </svg>
-              <p className="text-[13px]" style={{ color: '#1E40AF' }}>{opp.nextAction}</p>
+              <div>
+                <p className="text-[13px]" style={{ color: '#1E40AF' }}>{opp.nextAction}</p>
+                {opp.nextActionDue && (
+                  <p className="text-[11px] mt-0.5" style={{ color: '#6B7280' }}>
+                    Due: {new Date(opp.nextActionDue).toLocaleDateString()}
+                  </p>
+                )}
+              </div>
             </div>
           </section>
 
@@ -272,7 +292,7 @@ export default function OpportunityDetailPage() {
             <div className="space-y-2">
               {inquiry && (
                 <Link
-                  href={`/admin/inquiries`}
+                  href={`/admin/inquiries/${inquiry.id}`}
                   className="flex items-center gap-2.5 p-2.5 rounded-[4px] border text-[13px] font-medium transition-colors hover:opacity-80"
                   style={{ borderColor: 'var(--border)', color: 'var(--accent)' }}
                 >
@@ -287,7 +307,7 @@ export default function OpportunityDetailPage() {
               )}
               {quote && (
                 <Link
-                  href={`/admin/quotes`}
+                  href={`/admin/quotes/${quote.id}`}
                   className="flex items-center gap-2.5 p-2.5 rounded-[4px] border text-[13px] font-medium transition-colors hover:opacity-80"
                   style={{ borderColor: 'var(--border)', color: 'var(--accent)' }}
                 >

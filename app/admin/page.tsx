@@ -34,7 +34,7 @@ export default function AdminPage() {
   }, []);
 
   // Pipeline KPIs
-  const pendingApproval = quotes.filter((q) => q.status === 'pending_approval').length;
+  const pendingApproval = quotes.filter((q) => q.status === 'in_review').length;
   const sentQuotes = quotes.filter((q) => q.status === 'sent').length;
   const activeInquiries = inquiries.filter((i) => ['received', 'reviewing', 'extracting'].includes(i.status)).length;
   const activeOpps = opportunities.filter((o) => ['lead', 'qualified', 'proposal', 'negotiation'].includes(o.stage)).length;
@@ -54,12 +54,13 @@ export default function AdminPage() {
 
   const quoteStatusColors: Record<string, { bg: string; color: string }> = {
     draft: { bg: '#F3F4F6', color: '#6B7280' },
-    pending_approval: { bg: '#FEF3C7', color: '#D97706' },
+    in_review: { bg: '#FEF3C7', color: '#D97706' },
     approved: { bg: '#D1FAE5', color: '#059669' },
     sent: { bg: '#DBEAFE', color: '#2563EB' },
     accepted: { bg: '#D1FAE5', color: '#059669' },
     rejected: { bg: '#FEE2E2', color: '#DC2626' },
     negotiating: { bg: '#FED7AA', color: '#EA580C' },
+    expired: { bg: '#F3F4F6', color: '#6B7280' },
   };
 
   return (
@@ -116,7 +117,7 @@ export default function AdminPage() {
             </Link>
           </div>
           <div>
-            {quotes.filter((q) => q.status === 'pending_approval').map((quote) => {
+            {quotes.filter((q) => q.status === 'in_review').map((quote) => {
               const sc = quoteStatusColors[quote.status];
               return (
                 <Link

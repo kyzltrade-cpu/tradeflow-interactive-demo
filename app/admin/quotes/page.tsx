@@ -13,7 +13,7 @@ export default function QuotesPage() {
   const tabs = [
     { key: 'all', label: 'All', zh: '全部' },
     { key: 'draft', label: 'Draft', zh: '草稿' },
-    { key: 'pending_approval', label: 'Pending', zh: '待審批' },
+    { key: 'in_review', label: 'In Review', zh: '審查中' },
     { key: 'sent', label: 'Sent', zh: '已發送' },
     { key: 'accepted', label: 'Accepted', zh: '已接受' },
     { key: 'rejected', label: 'Rejected', zh: '已拒絕' },
@@ -23,12 +23,13 @@ export default function QuotesPage() {
 
   const statusColors: Record<string, { bg: string; color: string }> = {
     draft: { bg: '#F3F4F6', color: '#6B7280' },
-    pending_approval: { bg: '#FEF3C7', color: '#D97706' },
+    in_review: { bg: '#FEF3C7', color: '#D97706' },
     approved: { bg: '#D1FAE5', color: '#059669' },
     sent: { bg: '#DBEAFE', color: '#2563EB' },
     accepted: { bg: '#D1FAE5', color: '#059669' },
     rejected: { bg: '#FEE2E2', color: '#DC2626' },
     negotiating: { bg: '#FED7AA', color: '#EA580C' },
+    expired: { bg: '#F3F4F6', color: '#6B7280' },
   };
 
   return (

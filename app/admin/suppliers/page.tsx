@@ -77,8 +77,8 @@ export default function SuppliersPage() {
                   <td className="py-3">
                     <div className="flex flex-wrap gap-1">
                       {sup.certifications.map((cert) => (
-                        <span key={cert} className="px-1.5 py-0.5 rounded text-[10px] font-medium" style={{ background: '#DBEAFE', color: '#2563EB' }}>
-                          {cert}
+                        <span key={cert.name} className="px-1.5 py-0.5 rounded text-[10px] font-medium" style={{ background: '#DBEAFE', color: '#2563EB' }}>
+                          {cert.name}
                         </span>
                       ))}
                     </div>
