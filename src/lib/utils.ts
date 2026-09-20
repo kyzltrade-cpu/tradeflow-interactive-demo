@@ -14,6 +14,10 @@ export function formatDate(date: string | Date) {
   }).format(new Date(date));
 }
 
+export function formatCurrency(amount: number, currency = 'USD') {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
+}
+
 export function formatRelativeTime(date: string | Date) {
   const now = new Date();
   const then = new Date(date);
